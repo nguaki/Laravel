@@ -15,6 +15,8 @@ composer create-project  laravel/laravel lsapp
 php --version       7.0.32
 php artisan --version 5.5.28
 
+3.5 mysql-ctl cli
+
 4. This is where everything begins
 lsapp/public/index.php 
 
@@ -174,6 +176,176 @@ Route::resource('posts', 'PostsController' );
 |        | GET|HEAD  | services          |               | App\Http\Controllers\PagesController@services | web          |
 +--------+-----------+-------------------+---------------+-----------------------------------------------+--------------+
 
----Video #6
+---Video #6 (Fetching Data with Eloquent)
+
+25. Add 3 lines to Post.php
+    protected $table = 'posts';
+    public $primaryKey = 'id';
+    public $timestamps = true;
+
+26. Enter posts URIL to URL  like this
+    https://latest-laravel-dguai.c9users.io/posts
+    a. Should be blank.
+    b. According to the above chart, this should direct to PostsController@index.
+    
+27. Create a new folder posts under resources/views
+
+28. Create a file name index.blade.php under resources/views/posts.
+    a. Enter contents.
+    b. Goto URL and https://latest-laravel-dguai.c9users.io/posts
+    c. Validate the contents.  Should not be blank.
+    
+29. From index() method of PostsController class, enter following lines:
+    
+        $posts = Post::all();
+        return view('posts.index')->with('posts',$posts);
+
+30. Write blade code to display $posts using bootstrap. Write in  index.blade.php    
+
+31. From resources/views/inc/navbar.blade.php, add a new menu item
+    <li><a href="\posts">Blog</a></li>
+    
+32. Create a hyperlink from posts/index.blade.php,
+                <h3><a href="/posts/{{$post->id}}">{{$post->title}}</a></h3>
+    a. Refresh the page.
+    b. Should see the hyperlink when mouse hovers on 'Post 1' or 'Post 2'.
+    c. Click on 'Post 1'. URI should read /posts/1
+    
+33. Add this line to show() method of PostsController class:
+            return Post::find($id);
+    a. Should display JSON data when clicking 'Post 1'.
+    
+34. Send JSON data to show.blade.php upder posts directory.
+
+35. Write blade code to display the body of the blog.
+
+36. For pagination
+    a. Insert        
+       $posts = Post::orderBy('title','desc')->paginate(1);   //Pagination. # of items per page
+    b. Add this line in index.blade.php
+    /resources/views/posts/index.balde.php
+    {{$posts->links()}}
 
 
+Video #7 (Forms and Saving Data)
+
+37. https://latest-laravel-dguai.c9users.io/posts/create should be the page for form display.
+
+    a. Add following line to PostsController->create()
+       return view('posts.create');
+    b. Create /resources/posts/create.blade.php
+    
+38. In order to use laravelcollective.com, do the following:
+    a.composer require "laravelcollective/html":"^5.4.0"
+    b.config/app.php
+        Add this line to provider
+        
+        Collective\Html\HtmlServiceProvider::class,
+
+    c. Add these 2 lines to aliases
+        'Form' => Collective\Html\FormFacade::class,
+        'Html' => Collective\Html\HtmlFacade::class,
+
+39. Create a form in post/create.blade.php using Laravel collectives.
+
+40. Press submit button, it should be going to posts/store.
+    URI will not show store.  It will only show posts.
+    
+41. Need to define PostsController->store().
+
+     $this->validate($request, [
+            'title' => 'required',
+            'body'  => 'required'
+        ]);
+        
+42.  Submit buttons withous text inputs not filled.  It should not process the 
+     form due to validation rules.
+
+     Once any text has been entered, it should process the form.
+     
+43.  For displaying error messages when a form has been submitted,
+
+     create a file views/inc/messages.blade.php
+     
+44.  Important note: Since the validation rules have been created, Laravel will
+     generate error messages and they will be stored in $errors.
+     
+     a. Define form related error messages on messages.blade.php
+     b. Define session related error messages on messages.blade.php
+
+45.  Need to include messages.blade.php inside views/layouts/app.blade.php.
+            @include('inc/messages');
+            @yield('content')
+
+     Note that inc.messages doesn't work. Must use slash not dot.
+     
+46. Complete PostsController->store() with writing inserting a record into DB using Eloquent.
+
+        $post = new Post;
+        $post->title = $request->input('title');
+        $post->body = $request->input('body');
+        $post->save();
+        
+        //success is $_SESSION['success']
+        return redirect('/posts')->with('success', 'Post Create'); <==redirect with a messages
+        
+47. Now test this by goint to posts/create URI.
+
+48. Now make this User friendly, create a new item in Navbar:
+
+             <ul class="nav navbar-nav navbar-right">
+               <li><a href="\posts\create">Create</a></li>
+             </ul>
+             
+Purpose of next 5 or so instructions is to create edit tool for
+the text area.
+
+49. Search for laravel-ckeditor from google.
+    Should direct to github.
+    
+50. Per instruction from github, execute
+    composer require unisharp/laravel-ckeditor
+    
+51. Need to add this line to config/app.php, under Provider array section.
+    Unisharp\Ckeditor\ServiceProvider::class,
+    
+52. Publish resources?
+    php artisan vendor:publish --tag=ckeditor
+
+53. Per instruction from github, add these lines to app.blade.php under layout folder.
+
+
+    <script src="/vendor/unisharp/laravel-ckeditor/ckeditor.js"></script>
+    <script>
+        CKEDITOR.replace( 'article-ckeditor' );
+    </script>
+
+     
+     
+54. Add this line to create.blade.php
+
+    {{Form::textarea('body', '', ['id'=>'article-ckeditor', 'class'=>'form-control', 'placeholder'=>'Body text'])}} 
+    Note that 'id'=>'article-ckeditor'
+    
+55. In order strip html tags out, 
+
+    Convert {{$post->body}} to {!!$post->body!!}.
+    
+    Note that, DB shows:
+    mysql> select * from posts;
++----+------------+-------------------------------------------+---------------------+---------------------+
+| id | title      | body                                      | created_at          | updated_at          |
++----+------------+-------------------------------------------+---------------------+---------------------+
+|  1 | Post One   | This is the post body                     | 2018-11-03 03:31:59 | 2018-11-03 03:31:59 |
+|  2 | Post Two   | This is post two body                     | 2018-11-03 03:37:04 | 2018-11-03 03:37:04 |
+|  3 | post three | Post three body                           | 2018-11-03 20:07:32 | 2018-11-03 20:07:32 |
+|  4 | post four  | <p>This is post <strong>four</strong></p> | 2018-11-03 21:38:18 | 2018-11-03 21:38:18 |
++----+------------+-------------------------------------------+---------------------+---------------------+
+
+Last row shows that the body contains html tags.
+
+Video #8 (Edit and Delete Data)
+
+
+    
+    
