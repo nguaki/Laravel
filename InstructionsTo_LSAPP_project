@@ -1,0 +1,179 @@
+1. Upgrade to php 7.0
+git clone https://github.com/elijahcruz12/PHP-7-Installer-for-C9.IO.git
+
+cd PHP-7-Installer-for-C9.IO/
+
+python c9.io.php.py
+
+
+2. Create a new laravel project
+
+composer create-project  laravel/laravel lsapp
+
+3. Find out the latest version
+
+php --version       7.0.32
+php artisan --version 5.5.28
+
+4. This is where everything begins
+lsapp/public/index.php 
+
+5. Laravel File Structure
+
+MODEL -  app/
+
+VIEW  -  resources/views
+
+CONTROLLER - Http/Controllers
+
+ROUTES - routes/
+
+6. resources/sass/app.scss
+   it is importing files from node_modules directory.
+   this means node_modules directory needs to be populated using npm_install.
+   from lsapp directory, need to run 'npm install'.
+   npm install will be based on package.json file.
+   if you look at package.json, there is a dependency 'bootstrap-sass' which 
+   needs to be populated.
+  
+7. To make _variables.scss variable to work. 
+   a. modify a variable name.
+   b. from cli,  run 'npm run dev'.
+   c. from URL, see the change.
+  
+8. In order to automatically makes changes to scss file, run 'npm run watch'.
+
+9. In order to create customize SCSS
+   a. Under resources/sass, create file with extension scss. e.g. _custom.scss
+   b. From custom.scss, add HTML/CSS tag.  e.g. body{  background: red !important )
+      !important is SCSS tag which implies that this definition overrides.
+   c. Add a new line in app.scss,  @import "custom"; 
+   
+10. How to import navbar file.
+   a. create resources/views/inc/navbar.blade.php
+   b. from layouts/app.blade.php, add a line @include "inc/navbar"
+   
+11. Get source code to navbar
+    a. www.getbootstrap.com
+    b. goto Examples menu bar
+    c. goto starter template
+    d. get source code
+    e. copy the navbar piece
+    
+12. Create a database
+    a. mysql-ctl cli
+    b. create database lsapp;
+    
+13. Create a new controller
+    a.php artisan make:controller PostsController  (note: Posts - plural)
+    b.Under Controllers folder, there should be PostsController.php create.
+    
+14. Create a new model with database (-m means to create database)
+    a.php artisan make:model Post -m (note: Post - singular)
+    b. Inside app folder and right after Providers folder, there should be a new
+       file called Post.php.
+    c. Inside database folder there is a file called  xxxx_create_posts_table.php where
+       xxxx represents the date stamp of the file.
+       
+       
+15. Enter these 2 lines into   xxxx_create_posts_table.php
+            $table->string('title');
+            $table->mediumText('body');
+
+16. Goto project directory and edit .env file.
+    a. Modify DB_DATABASE to lsapp
+    b. Modify DB_USERNAME to dguai
+    c. Modify DB_PASSWORD
+    
+    
+17. To avoid problem with  $table->string('title'); on the size, add these lines to AppServiceProvider.php
+
+    use Illuminate\Support\Facades\Schema;
+    public function boot()
+    {
+        //
+        Schema::defaultStringLength(191);
+    }
+    
+18. Execute 'php artisan migrate'
+
+    a. Migration table created successfully.
+       Migrating: 2014_10_12_000000_create_users_table
+       Migrated:  2014_10_12_000000_create_users_table
+       Migrating: 2014_10_12_100000_create_password_resets_table
+       Migrated:  2014_10_12_100000_create_password_resets_table
+       Migrating: 2018_10_29_193437_create_posts_table
+       Migrated:  2018_10_29_193437_create_posts_table
+
+    b. Now check the table lsapp:posts.
+       You will see new columns.
+       
+19.  Use tinker to add data to Post table.
+
+a.  php artisan tinker
+>>> App\Post::count()
+=> 0
+>>> $post = new App\Post();
+=> App\Post {#2845}
+>>> $post->title = 'Post One';
+=> "Post One"
+>>> $post->body = 'This is the post body';
+=> "This is the post body"
+>>> $post->save();
+=> true
+ 
+b. Check the data in mysql. 
+c. add second row of data
+d. Exit out of tinker with 'quit' command.
+
+20. Remove PostsController.php since forgot to add --resource option.
+    This --resource automatically creates 7 basic methods to this class.
+    The methods are index(), create(), store(), edit(), update(), show(), destroy().
+    
+    Manually remove this file.
+
+21. php artisan make:controller PostsController --resource
+
+    a. Go into PostsController.php and validate all 7 methods are created.
+    
+22. Run following command and you will see all the routes:
+
+    php artisan route:list
+    
++--------+----------+----------+------+-----------------------------------------------+--------------+
+| Domain | Method   | URI      | Name | Action                                        | Middleware   |
++--------+----------+----------+------+-----------------------------------------------+--------------+
+|        | GET|HEAD | /        |      | App\Http\Controllers\PagesController@index    | web          |
+|        | GET|HEAD | about    |      | App\Http\Controllers\PagesController@about    | web          |
+|        | GET|HEAD | api/user |      | Closure                                       | api,auth:api |
+|        | GET|HEAD | services |      | App\Http\Controllers\PagesController@services | web          |
++--------+----------+----------+------+-----------------------------------------------+--------------+
+
+23. In order to create routes to all 7 methods to PostsController.
+
+Add this line to web.php under routes folder.
+
+Route::resource('posts', 'PostsController' );
+
+24. Now, find out about the current routes with 
+    php artisan route:list
+    
++--------+-----------+-------------------+---------------+-----------------------------------------------+--------------+
+| Domain | Method    | URI               | Name          | Action                                        | Middleware   |
++--------+-----------+-------------------+---------------+-----------------------------------------------+--------------+
+|        | GET|HEAD  | /                 |               | App\Http\Controllers\PagesController@index    | web          |
+|        | GET|HEAD  | about             |               | App\Http\Controllers\PagesController@about    | web          |
+|        | GET|HEAD  | api/user          |               | Closure                                       | api,auth:api |
+|        | GET|HEAD  | posts             | posts.index   | App\Http\Controllers\PostsController@index    | web          |
+|        | POST      | posts             | posts.store   | App\Http\Controllers\PostsController@store    | web          |
+|        | GET|HEAD  | posts/create      | posts.create  | App\Http\Controllers\PostsController@create   | web          |
+|        | GET|HEAD  | posts/{post}      | posts.show    | App\Http\Controllers\PostsController@show     | web          |
+|        | PUT|PATCH | posts/{post}      | posts.update  | App\Http\Controllers\PostsController@update   | web          |
+|        | DELETE    | posts/{post}      | posts.destroy | App\Http\Controllers\PostsController@destroy  | web          |
+|        | GET|HEAD  | posts/{post}/edit | posts.edit    | App\Http\Controllers\PostsController@edit     | web          |
+|        | GET|HEAD  | services          |               | App\Http\Controllers\PagesController@services | web          |
++--------+-----------+-------------------+---------------+-----------------------------------------------+--------------+
+
+---Video #6
+
+
