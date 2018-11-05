@@ -9,6 +9,16 @@ use DB;   //This is case when decided not to use Eloquence.
 class PostsController extends Controller
 {
     /**
+     * Create a new controller instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        $this->middleware('auth', ['except' => ['index', 'show']]);
+    }
+
+    /**
      * Display a listing of the resource.
      *
      * @return \Illuminate\Http\Response
@@ -59,6 +69,10 @@ class PostsController extends Controller
         $post = new Post;
         $post->title = $request->input('title');
         $post->body = $request->input('body');
+        
+        //Since auth is turned on, the current logged in user's id can be obtained.
+        $post->user_id = auth()->user()->id;
+        
         $post->save();
         
         //success is $_SESSION['success']
@@ -86,7 +100,13 @@ class PostsController extends Controller
      */
     public function edit($id)
     {
-        //
+        $post =  Post::find($id);
+        
+        //Check for correct user
+        if(auth()->user()->id !== $post->user_id){
+            return redirect('/posts')->with('error', 'Unauthorized Page');
+        }
+        return view('posts.edit')->with('post', $post);
     }
 
     /**
@@ -96,9 +116,21 @@ class PostsController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, $id) //Note two parameters
     {
         //
+        $this->validate($request, [
+            'title' => 'required',
+            'body'  => 'required'
+        ]);
+        
+        $post = Post::find($id); //Note: this is not a new object.
+        $post->title = $request->input('title');
+        $post->body = $request->input('body');
+        $post->save();
+        
+        //success is $_SESSION['success']
+        return redirect('/posts')->with('success', 'Post Updated');
     }
 
     /**
@@ -109,6 +141,14 @@ class PostsController extends Controller
      */
     public function destroy($id)
     {
-        //
+        $post =  Post::find($id);
+        
+        //Check for correct user
+        if(auth()->user()->id !== $post->user_id){
+            return redirect('/posts')->with('error', 'Unauthorized Page');
+        }
+        
+        $post->delete();
+        return redirect('/posts')->with('success', 'Post Deleted');
     }
 }

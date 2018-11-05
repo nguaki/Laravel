@@ -346,6 +346,304 @@ Last row shows that the body contains html tags.
 
 Video #8 (Edit and Delete Data)
 
+56. Create a link to edit when a single post is displayed.
 
+    <a href="/posts/{{$post->id}}/edit" class="btn btn-default">Edit</a>
+
+57.  When pressing a button to edit a post, the URI will show
+
+     http://latest-laravel-dguai.c9users.io/posts/4/edit 
+    
+58.  Need to define PostsController->edit()
+
+    Copy from show() and tweak.
+    
+    public function edit($id)
+    {
+        $post =  Post::find($id);
+        return view('posts.edit')->with('post', $post);
+    }
+
+59.  Create edit.blade.php under posts directory.
+
+     Copy and paste from create.blade.php.
+     
+     Need to make several modifications.       ----- Change from create to update.
+                                               |
+                                               V
+    {!! Form::open(['action'=>['PostsController@update', $post->id],'method'=>'POST']) !!}
+    
+        <div class="form-group">
+           {{Form::label('title', 'Title')}}
+           {{Form::text('title', $post->title, ['class'=>'form-control', 'placeholder'=>'Title'])}} 
+        </div>
+        
+        <div class="form-group">
+           {{Form::label('body', 'Body')}}
+           {{Form::textarea('body', $post->body, ['id'=>'article-ckeditor', 'class'=>'form-control', 'placeholder'=>'Body text'])}} 
+        </div>
+        {{Form::hidden('_method','PUT')}} 
+        {{Form::submit('Submit', ['class'=>'btn-btn-primary'])}} 
+    {!! Form::close() !!}
+    
+    Run php artisan route:list
+    
+    |        | PUT|PATCH | posts/{post}      | posts.update  | App\Http\Controllers\PostsController@update   | web          |
+
+    Note that when update() method is invoked, the method is PUT|PATCH.
+    Neither method can be put in the form.
+    
+    Work around is use Form::hidden().
+    
+60) Next few steps deal with deleting a blog.
+
+61) Place a red delete button to the right side of a blog in show.blade.php.
+    The button is trigger in a form.
+    Note that php artisan route:list
+    
+    DELETE    | posts/{post}      | posts.destroy | App\Http\Controllers\PostsController@destroy  | web          |
+|
+    The method is DELETE.  
+    This can be accomplished with spoof form
+    
+        {!!Form::open(['action'=>['PostsController@destroy', $post->id], 'method'=>'POST', 'class'=>'pull-right'])!!}
+              {{Form::hidden('_method', 'DELETE')}} 
+              {{Form::submit('Delete', ['class' => 'btn btn-danger'])}}
+        {!!Form::close()!!} 
+        
+62) Press Delete button and the page goes blank.  Note that URI stays the same.
+
+
+63) Need to define PostsController->destroy() method.
+
+        $post =  Post::find($id);
+        $post->delete();
+        return redirect('/posts')->with('success', 'Post Deleted');
+
+Video #9 (User Access Control & Authentication)(16 minutes)
+64) Note that under database/migrations folder, there is 2014_10_12_000000_create_users_table.php
+    The up() method created the schema of this table.
+    Note that Blueprint is an interface.
+    
+65) In order to enable authentication (?) run artisan command:
+    php artisan make:auth
+ 
+    This command will enable Login, Register, ResetPW and ForgotPW readily.
+    Imagine writing all these without a framework.
+    
+66) It is going to prompt with this question:
+
+ The [layouts/app.blade.php] view already exists. Do you want to replace it? (yes/no) [no]:
+
+Before answering 'yes', make a copy of current /resources/views/layouts/app.blade.php to a temp.php.
+The part of the code on layouts/app.blade.php will be used on the new app.blade.php.
+
+Answer with 'yes'.
+
+66.5) Note that JS error occurred.  Need to change 
+<!--<link href="{{ asset('css/app.css') }}" rel="stylesheet">-->       <== http
+    <link href="{{ secure_asset('css/app.css') }}" rel="stylesheet">   <== https
+This is C9 error message.
+
+67) Cut code pertaining to navbar from new app.blade.php and paste to inc/navbar.blade.php.
+    a)Need to copy and paste lines of code from existing navbar.blade.php to new navbar.blade.php.
+    
+68) Copy and paste  necessary lines from previous app.blade.php to the new app.blade.php.
+    <div id="app">
+        @include('inc/navbar')
+        <div class='container'>
+            @include('inc/messages') 
+            @yield('content')
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ asset('js/app.js') }}"></script>
+    <script src="/vendor/unisharp/laravel-ckeditor/ckeditor.js"></script>
+    <script>
+            CKEDITOR.replace( 'article-ckeditor' );
+    </script>
+
+69) Use Register to register.
+    This will take to /home
+    
+70) Note that /home is really not a good name.
+    /dashboard should be more appropriate.
+    
+   a)From routes/web.php,   
+   
+   //Route::get('/home', 'HomeController@index')->name('home');
+    Route::get('/dashboard', 'DashboardController@index');
+
+   b)From resources/views
+   Change file name from home.blade.php  to dashboard.blade.php
+   
+   c)From app/Http/Controllers
+   Change file name from HomeController.php to DashboardController.php
+   Within DashboardController.php, modify class name from HomeController to DashboardController.
+   
+   d)Modify index() of DashboardController.php
+        From     return view('home');
+        To       return view('dashboard');
+
+   e)Modify LoginController.php
+        home -> dashboard
+   f)Modify RegisterController.php
+        home -> dashboard
+   g)Modify ResetPasswordController.php
+        home -> dashboard
+        
+71)Need to add a new column called user_id to posts table using Artisan.
+   php artisan make:migration add_user_id_to_posts
+  
+   This command responds with:
+   Created Migration: 2018_11_04_204005_add_user_id_to_posts
+
+72) Need to add these lines of code to create a schema for this column.
+    Need to add code to up() method.
+    
+        Schema::table('posts', function($table)
+        {
+            $table->integer('user_id');
+        });
+
+73) In order to rollback changes, add these lines of code to down() method.
+
+        Schema::table('posts', function($table)
+        {
+            $table->dropColumn('user_id');
+        });
+
+74)The actual change to the table will take place with this command:
+
+php artisan migrate
+Migrating: 2018_11_04_204005_add_user_id_to_posts
+Migrated:  2018_11_04_204005_add_user_id_to_posts
+
+75)Now validate the changes to posts table.
+
+76)Update posts table by setting user_id = 1.
+
+77) Add this line to  PostsController->store()
+
+        //Since auth is turned on, the current logged in user's id can be obtained.
+        $post->user_id = auth()->user()->id;
+        
+78) Now create a new post.
+    Check the DB. It should have user_id = 1 at posts table.
+
+
+Video #10) Creating relationship between tables(posts and users)
+79)Creating relationship from posts table.
+
+    From /lsapp/app/Post.php
+    public function user(){
+        return $this->belongsTo('App\User');
+    }
+    
+    Observation:
+    The above relationship enables to retrieve user information of a post.
+    So something like this is able:
+    
+    SELECT user.user_id, user.name, post.*
+    FROM   post, user
+    WHERE  post.user_id = user.user_id
+
+80)Creation relationship from users table.
+
+    From /lsapp/app/User.php
+    //Establishes User:Posts relationship which is 1:N. 
+    public function posts(){
+        return $this->hasMany('App\Post');
+    }
+
+   Observation:
+   
+   SELECT * 
+   FROM   post
+   WHERE  post.user_id = user.user_id 
+   
+   Next two steps involve displaying all the posts that belong to a logged in user.
+   
+81) From DashboardController.php->index(),
+    modify code to send in all posts that belong to a logged user:
+    
+        $user_id = auth()->user()->id;
+        
+        //The following seems to query for all posts that has user_id = $user_id.
+        $user    = User::find($user_id);
+        
+        return view('dashboard')->with('posts',$user->posts);
+        
+82)From dashboard.blade.php, create a table to list a post per row.
+   1st column  is the Post ID.
+   2nd column  is Edit button.
+   3rd column  is Delete button.
+   
+83) since relationship between 2 tables have been established, now name of the user
+    which created the post can be written on each post.
+    
+    resources/posts/index.blade.php, add this line
+    {{$post->user->name}}
+    resources/posts/show.blade.php, add this line
+    {{$post->user->name}}
     
     
+Video #11) Access Control - Don't want guest to create a post.  Guest can only view.
+                            Don't want one user to modify/delete other user's posts.
+                            
+84) From URL, a guest cannot enter URI /posts/create, the web shouldn't display a page.
+
+85) In DashboardController->__construct(), 
+
+      $this->middleware('auth');
+      
+    only allows logged in user to access this class.
+    
+    So, copy this line and paste to PostsController->__construct().
+
+86) Now, enter URI /posts/create.  Web app should not allow the page to be displayed.
+    It should kick a user out.
+    
+87) Now, a guest should be able to click Blog and should be able to display all blogs and also
+    able to display each blog in detail.
+    
+    Modify PostsController->__construct(),
+    
+    $this->middleware('auth', ['except' => ['index', 'show']]);
+
+88) Now, hit Blogs and Show.  It should work.
+
+89) Now, a guest should be able to display Blogs but there are Edit/Delete buttons.
+    These buttons should not be displayed at all when a guest logs in.
+    
+    From show.blade.php, enter @if(!Auth::guest())
+    
+    @if(!Auth::guest())
+        <a href="/posts/{{$post->id}}/edit" class="btn btn-default">Edit</a>
+        
+        {!!Form::open(['action'=>['PostsController@destroy', $post->id], 'method'=>'POST', 'class'=>'pull-right'])!!}
+              {{Form::hidden('_method', 'DELETE')}} 
+              {{Form::submit('Delete', ['class' => 'btn btn-danger'])}}
+        {!!Form::close()!!} 
+        @endif
+
+91) Now, a user AAA cannot edit/delete user ABC posts.
+
+92) Now, this the following needs to be disallowed 
+https://latest-laravel-dguai.c9users.io/posts/2/edit.
+
+   From PostsController->edit()
+         //Check for correct user
+        if(auth()->user()->id !== $post->user_id){
+            return redirect('/posts')->with('error', 'Unauthorized Page');
+        }
+
+93) Now, this the following needs to be disallowed 
+https://latest-laravel-dguai.c9users.io/posts/2/destroy.
+
+   From PostsController->destroy()
+         //Check for correct user
+        if(auth()->user()->id !== $post->user_id){
+            return redirect('/posts')->with('error', 'Unauthorized Page');
+        }

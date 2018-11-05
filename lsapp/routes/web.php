@@ -63,3 +63,7 @@ Route::get('/services', 'PagesController@services');
 
 //One command will create routes to all 7 methods to PostsController
 Route::resource('posts', 'PostsController' );
+Auth::routes();
+
+//Route::get('/home', 'HomeController@index')->name('home');
+Route::get('/dashboard', 'DashboardController@index')->name('dashboard');

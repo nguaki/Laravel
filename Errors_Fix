@@ -1,0 +1,29 @@
+Errors:
+
+Nov 4, 2018
+---------------------------------------------------------------------------------------------------------------
+Symptom: Boostrap CSS wasn't enabled.
+Looked into Dev Tool and got this error:
+
+was loaded over HTTPS, but requested an insecure stylesheet 'http://latest-laravel-dguai.c9users.io/css/app.css'. 
+This request has been blocked; the content must be served over HTTPS.
+
+FIX:
+
+<!--<link href="{{ asset('css/app.css') }}" rel="stylesheet">-->       <== http
+    <link href="{{ secure_asset('css/app.css') }}" rel="stylesheet">   <== https
+
+
+---------------------------------------------------------------------------------------------------------------
+Symptom:Getting DashboardController not found.
+        But DashboardController.php exists.
+        
+Fix:
+    Within the file, the class is defined as HomeController.
+---------------------------------------------------------------------------------------------------------------
+Symptom:user_id property not found
+
+Fix: $post.user_id was changed to $post->user_id.
+
+Comment: The error message is not correct.  It should say something like object is using scalar
+         dot operation to access a property.  

@@ -26,4 +26,9 @@ class User extends Authenticatable
     protected $hidden = [
         'password', 'remember_token',
     ];
+   
+    //Establishes User:Posts relationship which is 1:N. 
+    public function posts(){
+        return $this->hasMany('App\Post');
+    }
 }
