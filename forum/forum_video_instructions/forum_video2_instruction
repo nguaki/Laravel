@@ -1,0 +1,188 @@
+21)Trying to install sqlite
+
+ sudo apt-get install php7.0-sqlite --fix-missing
+ 
+ dguai:~/workspace/forum (master) $ sudo apt-get install php7.0-sqlite --fix-missing
+Reading package lists... Done
+Building dependency tree       
+Reading state information... Done
+Note, selecting 'php7.0-sqlite3' for regex 'php7.0-sqlite'
+The following package was automatically installed and is no longer required:
+  libvpx1
+Use 'apt-get autoremove' to remove it.
+The following NEW packages will be installed:
+  php7.0-sqlite3
+0 upgraded, 1 newly installed, 0 to remove and 266 not upgraded.
+Need to get 25.1 kB of archives.
+After this operation, 158 kB of additional disk space will be used.
+Err http://ppa.launchpad.net/ondrej/php/ubuntu/ trusty/main php7.0-sqlite3 amd64 7.0.32-3+ubuntu14.04.1+deb.sury.org+1
+  404  Not Found
+E: Failed to fetch http://ppa.launchpad.net/ondrej/php/ubuntu/pool/main/p/php7.0/php7.0-sqlite3_7.0.32-3+ubuntu14.04.1+deb.sury.org+1_amd64.deb  404  Not Found
+
+
+Failed loading sqlite.
+
+22)sudo apt-get install php7.1-sqlite3
+After this operation, 4910 kB of additional disk space will be used.
+Do you want to continue? [Y/n] y
+Err http://ppa.launchpad.net/ondrej/php/ubuntu/ trusty/main php7.1-common amd64 7.1.23-3+ubuntu14.04.1+deb.sury.org+1
+  404  Not Found
+Err http://ppa.launchpad.net/ondrej/php/ubuntu/ trusty/main php7.1-sqlite3 amd64 7.1.23-3+ubuntu14.04.1+deb.sury.org+1
+  404  Not Found
+E: Failed to fetch http://ppa.launchpad.net/ondrej/php/ubuntu/pool/main/p/php7.1/php7.1-common_7.1.23-3+ubuntu14.04.1+deb.sury.org+1_amd64.deb  404  Not Found
+
+E: Failed to fetch http://ppa.launchpad.net/ondrej/php/ubuntu/pool/main/p/php7.1/php7.1-sqlite3_7.1.23-3+ubuntu14.04.1+deb.sury.org+1_amd64.deb  404  Not Found
+
+E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+also failed
+
+23)Submitted sqlite3 and it went into sqlite prompt.
+dguai:~/workspace/forum (master) $ sqlite3
+SQLite version 3.8.2 2013-12-06 14:53:30
+Enter ".help" for instructions
+Enter SQL statements terminated with a ";"
+sqlite> .quit
+
+24)Modified phpunit.xml.
+
+        <env name="DB_CONNECTION" value="sqlite"/>
+        <env name="DB_DATABASE" value=":memory:"/>
+25)Ran phpunit,
+vendor/bin/phpunit
+Causing Caused by
+PDOException: could not find driver
+
+26)Not sure what this is but laracast.com Noitidart commented that 
+   "Error: Class 'Doctrine\DBAL\Driver\PDOSqlite\Driver not found' was fixed with
+   this command: 
+   
+  composer require doctrine/dbal
+  
+Using version ^2.5 for doctrine/dbal
+./composer.json has been updated
+Loading composer repositories with package information
+Updating dependencies (including require-dev)
+Package operations: 5 installs, 0 updates, 0 removals
+  - Installing doctrine/collections (v1.4.0): Downloading (100%)         
+  - Installing doctrine/cache (v1.6.2): Downloading (100%)         
+  - Installing doctrine/annotations (v1.4.0): Downloading (100%)         
+  - Installing doctrine/common (v2.7.3): Downloading (100%)         
+  - Installing doctrine/dbal (v2.5.13): Downloading (100%)         
+Writing lock file
+
+
+Generating optimized autoload files
+> Illuminate\Foundation\ComposerScripts::postAutoloadDump
+> @php artisan package:discover
+Discovered Package: fideloper/proxy
+Discovered Package: laravel/tinker
+Discovered Package: nesbot/carbon
+Package manifest generated successfully.
+
+27)Ran again. vendor/bin/phpunit.  But same error.
+
+28)Took an idea from Mohamed (from Laracast) to use mysql and a database called
+   forum_testing.
+   
+   Modified phpunit.xml to
+   <env name="DB_DATABASE" value="forum_testing"/>
+29)Ran vendor/bin/phpunit
+
+Getting this error message:
+ 1) Tests\Feature\ThreadsTest::a_user_can_browse_threads
+Expected status code 200 but received 404.
+Failed asserting that false is true.
+
+/home/ubuntu/workspace/forum/vendor/laravel/framework/src/Illuminate/Foundation/Testing/TestResponse.php:78
+/home/ubuntu/workspace/forum/tests/Feature/ThreadsTest.php:17
+
+FAILURES!
+Tests: 2, Assertions: 2, Failures: 1.
+
+30)The reason for 404 error, there is no route defined for /threads.
+   Need to define route for /threads.
+   
+31)Define ThreadsController->index()
+    public function index()
+    {
+        $threads = Thread::latest()->get();
+        return view('threads/index', compact('threads'));
+        //Note that . operator doesn't work. 
+        //return view('threads.index', compact('threads'));
+    }
+
+Step 32~36 deals with scaffolding(quick demonstration)
+32)submit php artisan make:auth
+   This will generate resources/views/layouts/app.blade.php
+                      resources/views/home.blade.php
+                      resources/views/welcome.blade.php
+                      
+33)Set CWD to public directory and run Command index.php
+   Now you should see navbar + login + registration.
+   
+34)Enter URI of http://latest-laravel-dguai.c9users.io/threads,
+   it gives a blank page.
+   
+35) Now run vendor/bin/phpunit
+PHPUnit 6.5.13 by Sebastian Bergmann and contributors.
+
+..                                                                  2 / 2 (100%)
+
+Time: 427 ms, Memory: 14.00MB
+
+OK (2 tests, 2 assertions)
+                      
+36)From URL,    http://latest-laravel-dguai.c9users.io/threads
+
+    Should see a list of items.
+    
+        return view('threads/index', compact('threads'));
+        //Note that . operator doesn't work. 
+        //return view('threads.index', compact('threads'));
+
+    Note that . didn't work!!!
+
+37) Need to define resources/views/threads/index.blade.php
+copy from resources/views/home.blade.php and paste to index.blade.php
+Write blade template to display each thread.
+
+38)From URI,test threads/id. It shows a blank page.
+a) From web.php,
+define Route::get('/threads/{thread}', 'ThreadsController@show'); 
+b) From ThreadsTest->show(), define 
+ return $thread;.
+ 
+ When enter from threads/1, the web should display JSON formatted data
+c) Send the $thread to view,
+       return view('threads/show', compact('thread'));
+
+39)Define threads/show.blade.php.
+
+Copy & paste from index.blade.php.
+Display the title and body.
+
+40)Create a link to threads/id from show all.
+Now the route for /threads/id is working,
+
+Create <a href around thread ID.
+                               <a href="/threads/{{$thread->id}}">
+                                    {{$thread->title}}
+                                </a>
+This can hyperlink into the body
+
+41)Another customized way of hyperlinking.
+Create App/Thread->path():
+
+    public function path()
+    {
+        return '/threads/' . $this->id;
+    }
+
+     Now this can be called to get the correct route.
+     
+     <a href="{{$thread->path()}}">
+     
+     
+     Thread class extends Model, this is why $this->id,body is available.
+     
+42)Now, run test.     All are green. 

@@ -1,0 +1,172 @@
+(1)submitted 'laravel new forum' command - getting 'laravel: command not found'.
+
+(2)submitted 'composer create-project laravel/laravel forum' command.
+
+on 8th second, 
+Installing laravel/framework (v5.4.15) Loading from Cache (per Dominic Jones)
+validated
+
+basic Forum has threads(posts) and replies.
+
+cool features (1)Show me all popular threads
+              (2)Show me all threads that I participated.
+              (3)Search forum
+              (4)Thumbs up forum
+              (5)Subscribe threadsA
+              
+Notes.txt
+#Forum
+
+1.Thread
+2.Reply
+3.User
+
+A. Thread is created by a user.
+B. A reply belongs to a thread and belongs to a user.
+
+(3)cd forum
+   php artisan make:model Thread -mr  
+   (-mr  option - Migration file and Resource control file)
+   
+  Model created successfully.
+  Created Migration: 2018_11_05_173052_create_threads_table
+  Controller created successfully.
+  
+(4)Validation of files
+   a)Under app folder, validate Thread.php
+   b)Under app/Http/Controller, validate ThreadController.php
+   c)Under database/migrations, validate xxx_create_threads_table.php
+ 
+(5) Enter these 3 lines into up() method of xxx_create_threads_table.php.
+            $table->integer('user_id');
+            $table->string('title');
+            $table->text('body');
+
+(6) Modify .env with these parameters
+DB_DATABASE=forum
+DB_USERNAME=dguai
+DB_PASSWORD= 
+
+(7)Need to go to mysql-ctl cli, create database forum;
+
+(8)php artisan migrate
+
+  Getting this error message:
+  
+  SQLSTATE[42000]: Syntax error or access violation: 1071 Specified key was too long; max key length is 767 bytes (SQL: alter table `users` add unique `users_email_uni  
+  que`(`email`))                                                                                                                                                         
+
+    Google it and found a solution from laravel-news.com/laravel-5.4-key-too-long-error
+    
+    Under Providers/AppServiceProvider.php,
+    modify
+    
+    use Illuminate\Support\Facades\Schema;
+    
+    public function boot()
+    {
+        Schema::defaultStringLength(191);
+    }
+    
+(9)php artisan migrate
+
+Got following errors:
+
+ SQLSTATE[42S01]: Base table or view already exists: 1050 Table 'users' already exists (SQL: create table `users` (`id` int unsigned not null auto_increment primary k  
+  ey, `name` varchar(191) not null, `email` varchar(191) not null, `password` varchar(191) not null, `remember_token` varchar(100) null, `created_at` timestamp null, `  
+  updated_at` timestamp null) default character set utf8mb4 collate utf8mb4_unicode_ci)                                                                                  
+                                                                                                                                                                         
+
+In Connection.php line 458:
+                                                                                         
+  SQLSTATE[42S01]: Base table or view already exists: 1050 Table 'users' already exists  
+                                                                                         
+
+Action: None of these commands worked:
+    php artisan migrate:reset 
+    php artisan migrate:refresh - Supposed to drop table but didn't for L5.5.
+     
+    had to manually drop tables.
+    drop table users;
+    drop table migration;
+    
+    (source: laracasts.com )
+                                                                                                                                                                         
+
+(10)php artisan migrate
+Migrating: 2014_10_12_000000_create_users_table
+Migrated:  2014_10_12_000000_create_users_table
+Migrating: 2014_10_12_100000_create_password_resets_table
+Migrated:  2014_10_12_100000_create_password_resets_table
+Migrating: 2018_11_05_173052_create_threads_table
+Migrated:  2018_11_05_173052_create_threads_table
+
+(11)Validate these tables in mysql.
+
+(12)php artisan make:model Reply -mc
+Model created successfully.
+Created Migration: 2018_11_05_182720_create_replies_table
+Controller created successfully.
+
+(13)Note: Reply belongs to a user and also thread
+
+    Add missing lines to database/migrations/XYZ_create_replies_table.php
+    
+    public function up()
+    {
+        Schema::create('replies', function (Blueprint $table) {
+            $table->increments('id');
+            $table->integer('thread_id');
+            $table->integer('user_id');
+            $table->text('body');
+            $table->timestamps();
+        });
+
+(14)
+dguai:~/workspace/forum (master) $ php artisan migrate
+Migrating: 2018_11_05_182720_create_replies_table
+Migrated:  2018_11_05_182720_create_replies_table
+
+(15)create a new factory called ThreadFactory.php under forum/database/factories
+    copy and paste code from UserFactory.php and modify the code to this:
+    
+    $factory->define(App\Thread::class, function (Faker $faker) {
+    return [
+        'user_id' => function(){
+            return factory('App\User')->create()->id;
+        },
+        'title' => $faker->sentence,
+        'body' => $faker->paragraph
+    ];
+});
+
+   Note that LV5.5 has php artisan make:factory Thread.
+   It has 2 problems:
+   a)The file name is Thread.php
+   b)The class name is not correct.
+   
+16)Populate 50 rows to Threads table using tinker.
+
+    php artisan tinker
+    
+    >>factory('App\Thread',50)->create()
+    
+    Validate with DB.
+    
+    Note that there are 50 users.
+    
+17)Create a factory called ReplyFactory.php
+
+18)Quit out of tinker and rollback all changes.
+   php artisan migrate:refresh
+   
+   All rows are gone.
+   Check with DB.
+   
+19)use tinker to populate threads like above.
+>> $threads = factory('App\Thread',50)->create();
+ 
+ This will generate 50 users and 50 threads.
+ 
+20)Continue with tinker, now generate 10 replies per thread
+$threads->each(function($thread){ factory('App\Reply',10)->create(['thread_id' => $thread->id]); });

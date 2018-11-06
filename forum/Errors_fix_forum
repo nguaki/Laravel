@@ -1,0 +1,44 @@
+
+Nov 5, 2018
+
+Symptom:
+
+  php artisan migrate
+
+  Getting this error message:
+  
+  SQLSTATE[42000]: Syntax error or access violation: 1071 Specified key was too long; max key length is 767 bytes (SQL: alter table `users` add unique `users_email_uni  
+  que`(`email`))                                                                                                                                                         
+
+    Google it and found a solution from laravel-news.com/laravel-5.4-key-too-long-error
+    
+    Under Providers/AppServiceProvider.php,
+    modify
+    
+    use Illuminate\Support\Facades\Schema;
+    
+    public function boot()
+    {
+        Schema::defaultStringLength(191);
+    }
+
+Symptom:
+ SQLSTATE[42S01]: Base table or view already exists: 1050 Table 'users' already exists (SQL: create table `users` (`id` int unsigned not null auto_increment primary k  
+  ey, `name` varchar(191) not null, `email` varchar(191) not null, `password` varchar(191) not null, `remember_token` varchar(100) null, `created_at` timestamp null, `  
+  updated_at` timestamp null) default character set utf8mb4 collate utf8mb4_unicode_ci)                                                                                  
+                                                                                                                                                                         
+
+In Connection.php line 458:
+                                                                                         
+  SQLSTATE[42S01]: Base table or view already exists: 1050 Table 'users' already exists  
+                                                                                         
+
+Action: None of these commands worked:
+    php artisan migrate:reset 
+    php artisan migrate:refresh - Supposed to drop table but didn't for L5.5.
+     
+    had to manually drop tables.
+    drop table users;
+    drop table migration;
+    
+    (source: laracasts.com )
