@@ -10,7 +10,14 @@ class ReadThreadsTest extends TestCase
 {
     //use DatabaseMigrations;
     use RefreshDatabase;
-    
+   
+    public function setup()
+    {
+        parent::setUp();
+        
+        $this->thread = factory('App\Thread')->create();
+        
+    }
     /** @test  */
     public function a_user_can_browse_all_threads()
     {
@@ -22,19 +29,32 @@ class ReadThreadsTest extends TestCase
     /** @test  */
     public function a_user_can_see_title()
     {
-        $thread = factory('App\Thread')->create();
         
-        $response = $this->get('/threads');
+        $response = $this->get('/threads')
 
-        $response->assertSee($thread->title);
+                         ->assertSee($this->thread->title);
     }
     /** @test  */
     public function a_user_can_see_a_single_thread()
     {
-        $thread = factory('App\Thread')->create();
         
-        $response = $this->get('/threads/' . $thread->id);
+        $response = $this->get('/threads/' . $this->thread->id)
 
-        $response->assertSee($thread->title);
+                         ->assertSee($this->thread->title);
+    }
+    
+    /** @test **/
+    public function a_user_can_read_replies_to_a_thread()
+    { 
+        //Create a reply of a thread.
+        $reply = factory('App\Reply')
+               ->create(['thread_id' => $this->thread->id]);
+        
+        //When we visit a thread page
+        //We should see replies.
+        $response = $this->get('/threads/'. $this->thread->id)
+                         ->assertSee($reply->body);
+        
+        
     }
 }

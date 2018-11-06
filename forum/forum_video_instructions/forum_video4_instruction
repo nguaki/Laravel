@@ -1,0 +1,286 @@
+57)Cut and paste these lines of code from show.blade.php to reply.blade.php
+
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <a href="#">
+            {{$reply->owner->name}}  //Note owner is an object of User.
+        </a> said {{$reply->created_at->diffForHumans()}}...
+    </div>
+                        
+    <div class="panel-body">
+        {{$reply->body}}
+    </div>
+</div>
+
+
+Note: All the code must be left justified.  Otherwise, it has ill side effect.
+
+Reference from show.blade.php by
+
+@include ('threads.reply')
+
+Note that 
+@include ('threads/reply') also works.
+
+58)Create a unit test to test a thread has many replies.
+
+a)Create unit/ThreadTest.php
+b)  public function a_thread_has_replies()
+    {
+        $thread = factory('App\Thread')->create();
+        
+        $this->assertInstanceOf('Illuminate\Database\Eloquent\Collection', $thread->replies);
+    }
+    Note Collection is an instance.
+    
+59)Create a unit test to test a thread has an owner.
+   a)Similar to Reply has an owner.
+   
+   Copy and paste from ReplyTest.php:
+    public function it_has_an_owner()
+    {
+        $reply = factory('App\Thread')->create();
+        
+        $this->assertInstanceOf('App\User', $reply->owner);
+        //$this->assertInstanceOf('App\Owner', $reply->owner);
+    }
+   b)Need to create a relationship from Thread.php perspective.
+     Remember this is one:one ratio.
+     
+(60) If run the phpunit, it will fail.
+
+(61)Now, need to create a relationship from Thread.php.
+
+    public function creator()
+    {
+         return $this->belongsTo(User::class, 'user_id');
+    }
+    user_id is FK.
+    
+(62)To trigger a single unit test:
+        phpunit --filter a_thread_has_a_creator
+        
+(63) Create a new feature test
+php artisan make:test ParticipateInForum
+Test created successfully.
+
+(64)Write up pseudo code
+
+(65)Problem with LV.
+
+    Expect an error message with 
+            $this->post('/threads/' . $thread->id . '/replies', $reply->toArray());
+
+    There is no route for /threads/2/replies.
+    This is not causing an error.
+    
+    The message I am getting is:
+    
+    There was 1 risky test:
+
+1) Tests\Feature\ParticipateInForum::an_authenticated_user_may_particiapte_in_forum_threads
+This test did not perform any assertions
+
+OK, but incomplete, skipped, or risky tests!
+Tests: 8, Assertions: 7, Risky: 1.
+
+66) THe above is misleading.  There must be an exception since the route
+    /thread/id/replies endpoint wasn't defined.
+    
+    According to Jeff,
+    
+    Add this line 
+    public function render($request, Exception $exception)
+    {
+        if (app()->environment() === 'testing') throw $exception;  <==This line
+        
+        return parent::render($request, $exception);
+    }
+    File location is at:
+    forum/app/Exceptions/Handler.php
+    
+67)When rerun the unit test, getting -
+
+vendor/bin/phpunit
+PHPUnit 6.5.13 by Sebastian Bergmann and contributors.
+
+E.......                                                            8 / 8 (100%)
+
+Time: 661 ms, Memory: 18.00MB
+
+There was 1 error:
+
+1) Tests\Feature\ParticipateInForum::an_authenticated_user_may_particiapte_in_forum_threads
+Symfony\Component\HttpKernel\Exception\NotFoundHttpException: 
+
+68)Now define route.
+The obvious choice seems to be the line above.
+//Route::post('/threads/{thread}/replies', 'ThreadsController@addReply');   <==ThreadsController can get bloated.
+Be careful since this controller can get bloated.
+
+It can go either way, but decided to go with RepliesController and using Restful API store name.
+Route::post('/threads/{thread}/replies', 'RepliesController@store'); 
+
+69)Now define RepliesController->store()
+
+   Thru routes to model binding, $thread can be sent as an argument.
+   In a way, it is a Dep Inj.
+   
+       public function store(Thread $thread){
+        $thread->addReply([
+            'body' => request('body'),
+            'user_id' => auth()->id()
+            ]);
+    }
+
+    Here, we are calling a Thread->addReply() that is not defined.
+    
+70)Since this is a TDD, create a test case that will fail.
+
+71) Refactor ThreadTest.php
+    Since factory('App/user')->create(); is used in all cases,
+    create setup().
+    
+72) There is a way to phpunit the entire class:
+    phpunit --filter ThreadTest
+    
+73) Now define a new test case:
+    public function a_thread_can_add_a_reply()
+    {
+        $this->thread->addReply([
+            'body'    => 'Foobar',
+            'user_id' => 1 
+            ]);
+            
+        $this->assertCount(1, $this->thread->replies);
+    }
+     
+74) Note that we are calling a method which does not exists.
+    phpunit should fail.
+    
+    Error message:
+    Tests\Unit\ThreadTest::a_thread_can_add_a_reply
+BadMethodCallException: Call to undefined method Illuminate\Database\Query\Builder::addReply()
+
+Note BadMethodCallException.
+
+75)Now define Thread->addReply()
+    public function addReply($reply)
+    {
+        $this->replies()->create($reply);
+    }
+    Note that Thread extends Model.
+    create() is a method from Model.
+    
+    replies() returns $this->hasMany().
+    
+    Again, hasMany() method is from Model.
+    It returns this.
+    
+    That is why create() was able to chain from replies().
+    
+76)Run phpunit.
+
+Getting this error message:
+1) Tests\Unit\ThreadTest::a_thread_can_add_a_reply
+Illuminate\Database\Eloquent\MassAssignmentException: body
+
+77)//The following assignement gets rid of
+   //Illuminate\Database\Eloquent\MassAssignmentException: body
+   protected $guarded = [];
+
+78)Rerun phpunit on ThreadTest only.
+   It is now green.
+   
+79) Inside RepliesController->store(), 
+    Now add  
+    return back();
+    
+    //Route to model binding allows $thread to be an argument.
+    public function store(Thread $thread){
+        $thread->addReply([
+            'body' => request('body'),
+            'user_id' => auth()->id()
+            ]);
+        return back();
+    }
+
+80) The following steps deal with feature test inside ParticipateInForum.php class.
+
+    These assertions are not recognized as assertion.
+    
+    $this->get($thread->path())
+             //->assertSee($reply->body);
+             ->assertSeeText($reply->body);
+
+81) Blog suggested
+     $this->post('/threads/' . $thread->id . '/replies', $reply->toArray())->assertStatus(200);
+     Got an error message saying that 200 and 302 do not match.
+     
+82)     
+     302 means URL redirection.
+     This assertion passed.
+     
+     $this->post('/cthreads/' . $thread->id . '/replies', $reply->toArray())->assertStatus(302);
+
+83) Tried following:
+     $reply = factory('App\Reply')->create();
+     
+    According to a blog, try
+        $reply = factory('App\Reply')->create(['thread_id'=>$thread->id]);
+        
+    However, neither seem to make any impact.
+
+84)Following steps deal with unauthenticated user.
+
+    Created RepliesController->__construct()
+    
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
+    With this construct,
+    
+    $user   = factory('App\User')->create(); <==This line makes unauthenticated. H
+        
+    $this->be($user = factory(',  App\User')->create()); //<==This line makes authenticated user.
+    Need to find out why?
+
+85) According to a blog, L5.5 redirects, does not throw an exception.
+
+    public function an_unauthenticated_user_may_not_particiapte_in_forum_threads()
+    {
+        //Given we have an unauthenticated user
+        $thread   = factory('App\Thread')->create();
+        
+        $reply = factory('App\Reply')->create();
+        
+        $this->post($thread->path() . '/replies', $reply->toArray())->assertRedirect('login');
+    }
+    
+    But it threw Illuminate\Auth\AuthenticationException: Unauthenticated.
+
+86) Follow the video:
+    
+    public function an_unauthenticated_user_may_not_particiapte_in_forum_threads()
+    {
+        $this->expectException('Illuminate\Auth\AuthenticationException');
+        
+        //Given we have an unauthenticated user
+        $thread   = factory('App\Thread')->create();
+        
+        $reply = factory('App\Reply')->create();
+        
+        $this->post($thread->path() . '/replies', $reply->toArray())->assertRedirect('login');
+    }
+    
+    This passed
+    
+87) Jeff said, this can be simplified by
+    public function an_unauthenticated_user_may_not_particiapte_in_forum_threads()
+    {
+        $this->expectException('Illuminate\Auth\AuthenticationException');
+        
+        $this->post('/threads/1/replies', []);
+    }

@@ -1,0 +1,127 @@
+43) Rename file and class to ReadThreadsTest.
+
+44) Put this  line       $thread = factory('App\Thread')->create();
+
+    into ReadThreadTest->setUp() method.
+
+    Change $thread to $this->thread
+    
+45) Refactor:
+
+        $response = $this->get('/threads');
+
+        $response->assertSee($this->thread->title);
+    
+    can be chained to:
+    
+        $response = $this->get('/threads')
+
+                         ->assertSee($this->thread->title);
+   
+    Explanation:
+      $response returns with view.
+          (a)It first  gets routed to a controller method
+          (b)Controller method returns a view.
+          
+46) Rearrange show.blade.php s.t. <div> line up.
+
+47) Now we want to display, all replies per thread.
+
+    (a)Add these lines to show.blade.php.
+    
+       <div class="panel panel-default">
+                @foreach($thread->replies as $reply)
+                <div class="panel panel-default">
+                    <div class="panel-body">
+                         {{$reply->body}}
+                    </div>
+                </div>
+                @endforeach
+            </div>
+   (b)From App/Thread.php, create a function called replies().
+      Using magic PHP,  $this->replies will actually call and return as replies property.
+     
+(48) Run phpunit.  All green.
+
+(49) From URL, there should be 10 replies per thread.
+
+(50) Add timing for replies,
+
+        <div class="panel-heading">
+            {{$reply->created_at->diffForHumans()}}
+        </div>
+        
+(51) Now we want to display the owner of replies.
+
+        {{$reply->owner->name}} said {{$reply->created_at->diffForHumans()}}
+
+    (a)Need to create table relationship betweena replies table to owner.
+       Remember that replies table does not have name.
+       users table has name.
+       these tables are related by replies:user_id to users:id.
+    (b) Relations is established from class Reply extends Model{}
+    
+    public function owner()
+    {
+       return $this->belongsTo(User::class, 'user_id');
+    }
+    One to One relationship. One reply has one owner.  'user_id' refers to foreign key.
+    
+(52) Create unit test using Artisan.
+     Another way to test if a reply has an owner is go thru a unit test.
+     
+     php artisan make:test ReplyTest --unit
+
+     Test created successfully.
+     
+(53)Under tests/ReplyTest.php
+
+    From unit test level, test if a reply has an owner.
+    
+    public function it_has_an_owner()
+    {
+        $reply = factory('App\Reply')->create();
+        
+        $this->assertInstanceOf('App\User', $reply->owner);
+    }
+
+    Note that $reply->owner is PHP magic method where method becomes a property.
+    
+(54) In order to test just one unit test:
+
+vendor/bin/phpunit tests/Unit/ReplyTest.php
+PHPUnit 6.5.13 by Sebastian Bergmann and contributors.
+
+.                                                                   1 / 1 (100%)
+
+Time: 158 ms, Memory: 12.00MB
+
+OK (1 test, 1 assertion)
+
+(55)Lets intentionally fail this test.
+I put expecting an instance of owner, not a user.
+This is the error message.
+
+vendor/bin/phpunit tests/Unit/ReplyTest.php
+PHPUnit 6.5.13 by Sebastian Bergmann and contributors.
+
+E                                                                   1 / 1 (100%)
+
+Time: 359 ms, Memory: 16.00MB
+
+There was 1 error:
+
+1) Tests\Unit\ReplyTest::it_has_an_owner
+PHPUnit\Framework\Exception: Argument #1 (No Value) of PHPUnit\Framework\Assert::assertInstanceOf() must be a class or interface name
+
+/home/ubuntu/workspace/forum/tests/Unit/ReplyTest.php:22
+
+The error message is easier to understand rather than coming from feature test.
+
+
+
+ERRORS!
+Tests: 1, Assertions: 0, Errors: 1.
+
+(56)Now make a href on reply owner's name.
+  <a href="#">{{$reply->owner}}</a>

@@ -21,7 +21,7 @@ Symptom:
     {
         Schema::defaultStringLength(191);
     }
-
+------------------------------------------------------------------------------------------------------------------
 Symptom:
  SQLSTATE[42S01]: Base table or view already exists: 1050 Table 'users' already exists (SQL: create table `users` (`id` int unsigned not null auto_increment primary k  
   ey, `name` varchar(191) not null, `email` varchar(191) not null, `password` varchar(191) not null, `remember_token` varchar(100) null, `created_at` timestamp null, `  
@@ -42,3 +42,100 @@ Action: None of these commands worked:
     drop table migration;
     
     (source: laracasts.com )
+------------------------------------------------------------------------------------------------------------------
+Date: 11/5/2018
+
+Symptom:
+     Variable threads not found from view/layouts/index.blade.php
+     
+     From ThreadsController->index()
+     
+Fix:
+    Don't use dot like view('thread.index');
+    Use a slash   like view('thread/index');
+    
+------------------------------------------------------------------------------------------------------------------
+Date: 11/6/2018
+
+Symptom:
+    The code was exact copy from the video but doesn't work.
+    It gave a weird error message which doesn't make a sense:
+    
+    From View, there was "Thread is not defined" error message.
+    
+   But from Controller, it is sending Thread.
+   
+Fix:  The problem was with extra curly bracket which PHP didn't pick up.
+      So when this happens, stop stare at it. Change variables around.
+      
+      When I change the variable name, it got a lot of error messages.
+      
+      Don't expect 100% error messages.
+------------------------------------------------------------------------------------------------------------------
+Date: 11/6/2018
+
+Symptom:
+    It was supposed to be a simple refactor.
+    
+    Create setup() method.
+    
+    But every test methods failed.
+    
+    Why?
+
+Fix:
+    Need Parent::setup();
+    
+    
+    Don't know why this is important.  Need to read LV Doc.
+------------------------------------------------------------------------------------------------------------------
+Date: 11/6/2018
+
+Symptom:   
+   Ran phpunit and getting this error message:
+   Illuminate\Database\Eloquent\MassAssignmentException: body
+
+Fix:
+    //The following assignement gets rid of
+    protected $guarded = [];
+
+------------------------------------------------------------------------------------------------------------------
+Date: 11/6/2018
+
+Symptom:   Ran phpunit and getting
+1) Tests\Feature\ParticipateInForumTest::an_authenticated_user_may_particiapte_in_forum_threads
+ReflectionException: Class App\Http\Controllers\Thread does not exist
+
+/home/ubuntu/workspace/forum/tests/Feature/ParticipateInForumTest.php:32
+
+This is the line #32:
+$this->post('/threads/' . $thread->id . '/replies', $reply->toArray())->assertStatus(200);
+
+The route exists in web.php.
+So what is the problem?
+
+Fix:
+In web.php, route is defined as
+Route::post('/threads/{thread}/replies', 'RepliesController@store'); 
+
+The problem is with the argument Thread.
+It is not defined.
+
+class RepliesController extends Controller
+{
+    //Route to model binding allows $thread to be an argument.
+    public function store(Thread $thread){
+        $thread->addReply([
+            'body' => request('body'),
+            'user_id' => auth()->id()
+            ]);
+        return back();
+    }
+    
+}
+
+So the error was not with that particular line number.
+Need to trace it.
+
+Need this statement:
+use App\Thread;
